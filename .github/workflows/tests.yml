@@ -1,0 +1,48 @@
+name: Tests
+
+on: ['push', 'pull_request']
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests ${{ matrix.php }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        php: [8.2, 8.3, 8.4]
+        dependency-version: [prefer-lowest, prefer-stable]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl
+          coverage: pcov
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: dependencies-php-${{ matrix.php }}-os-${{ matrix.os }}-version-${{ matrix.dependency-version }}-composer-${{ hashFiles('composer.json') }}
+          restore-keys: dependencies-php-${{ matrix.php }}-os-${{ matrix.os }}-version-${{ matrix.dependency-version }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer update --${{ matrix.dependency-version }} --no-interaction --prefer-dist
+
+      - name: Run Pest Tests in Parallel
+        run: vendor/bin/pest --parallel --coverage
+        env:
+          XDEBUG_MODE: coverage
+          PEST_PARALLEL_PROCESSES: max
