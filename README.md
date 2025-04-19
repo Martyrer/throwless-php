@@ -21,8 +21,8 @@ composer require martyrer/throwless-php
 - [**Type Checking**](#type-checking)
   - [`isOk()`](#isok) - Check if the Result contains a success value
   - [`isErr()`](#iserr) - Check if the Result contains an error value
-  - [`isOkAnd(callable $fn)`](#isokand) - Check if Result is Ok and the value matches a predicate
-  - [`isErrAnd(callable $fn)`](#iserrand) - Check if Result is Err and the error matches a predicate
+  - [`isOkAnd(callable $fn)`](#isokand) - Executes the closure and returns its result as a boolean if the result is Ok
+  - [`isErrAnd(callable $fn)`](#iserrand) - Executes the closure and returns its result as a boolean if the result is Err
 
 - [**Transformation**](#transformation-methods)
   - [`map(callable $fn)`](#map) - Transform the success value
