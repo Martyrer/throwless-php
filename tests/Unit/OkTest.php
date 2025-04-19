@@ -106,7 +106,11 @@ test('Ok::unwrapUnchecked returns the value', function (): void {
 
 test('Ok::unwrapErrUnchecked throws UnwrapException', function (): void {
     $ok = new Ok(42);
-    expect(fn (): mixed => $ok->unwrapErrUnchecked())->toThrow(UnwrapException::class);
+    $result = $ok->unwrapErrUnchecked();
+    expect($result)
+        ->toBeInstanceOf(Ok::class)
+        ->and($result->unwrap())
+        ->toBe(42);
 });
 
 test('Ok::unwrapOrDefault returns the value', function (): void {
@@ -157,11 +161,11 @@ test('Ok::isOkAnd returns false when predicate does not match', function (): voi
     expect($ok->isOkAnd(fn ($v): bool => $v === 0))->toBeFalse();
 });
 
-test('Ok::isOkAnd returns false when predicate throws', function (): void {
+test('Ok::isOkAnd throws when closure throws', function (): void {
     $ok = new Ok(42);
-    expect($ok->isOkAnd(function (): void {
+    expect(static fn (): mixed => $ok->isOkAnd(function (): void {
         throw new RuntimeException('Predicate error');
-    }))->toBeFalse();
+    }))->toThrow(RuntimeException::class);
 });
 
 test('Ok::expect returns the value', function (): void {

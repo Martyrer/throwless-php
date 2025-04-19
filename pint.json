@@ -19,9 +19,13 @@
             "import_constants": true,
             "import_functions": true
         },
+        "cast_spaces": {
+            "space": "none"
+        },
+        "not_operator_with_space": false,
         "mb_str_functions": true,
         "modernize_types_casting": true,
-        "new_with_parentheses": false,
+        "new_with_parentheses": true,
         "no_superfluous_elseif": true,
         "no_useless_else": true,
         "no_multiple_statements_per_line": true,

@@ -166,13 +166,13 @@ test('Err::isErrAnd returns false when predicate does not match', function (): v
     expect($err->isErrAnd(fn ($e): false => $e instanceof UnwrapException))->toBeFalse();
 });
 
-test('Err::isErrAnd returns false when predicate throws', function (): void {
+test('Err::isErrAnd throws when closure throws', function (): void {
     $error = new ValidationException('Test error');
     $err = new Err($error);
 
-    expect($err->isErrAnd(function (): void {
+    expect(static fn (): mixed => $err->isErrAnd(function (): void {
         throw new RuntimeException('Predicate error');
-    }))->toBeFalse();
+    }))->toThrow(RuntimeException::class);
 });
 
 test('Err::isOkAnd always returns false', function (): void {

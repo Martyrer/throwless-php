@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace Martyrer\Throwless;
 
 use Martyrer\Throwless\Attribute\Pure;
-use Martyrer\Throwless\Attribute\ResultReturn;
 use Martyrer\Throwless\Attribute\ResultType;
-use Martyrer\Throwless\Attribute\SideEffect;
 use Martyrer\Throwless\Exception\UnwrapException;
-use Throwable;
 
 /**
  * Represents a successful result containing a value.
@@ -45,6 +42,7 @@ final readonly class Ok implements Result
      * @param  T  $default
      * @return T
      */
+    #[Pure('For Ok instances, returns the contained value')]
     public function unwrapOr(mixed $default): mixed
     {
         return $this->value;
@@ -56,7 +54,7 @@ final readonly class Ok implements Result
      * @param  callable(T): U  $fn
      * @return Result<U, E>
      */
-    #[ResultReturn]
+    #[Pure('Executes the closure with a contained value and returns a new Ok instance or the closure result if it is a Result')]
     public function map(callable $fn): Result
     {
         $result = $fn($this->value);
@@ -75,7 +73,7 @@ final readonly class Ok implements Result
      * @param  callable(E): F  $fn
      * @return Result<T, F>
      */
-    #[ResultReturn]
+    #[Pure('For Ok instances, wraps the value in a new Ok')]
     public function mapErr(callable $fn): Result
     {
         /** @var Ok<T, F> */
@@ -88,7 +86,7 @@ final readonly class Ok implements Result
      * @param  callable(T): U  $fn
      * @return Result<U, E>
      */
-    #[ResultReturn]
+    #[Pure('Executes the closure with a contained value and returns a new Ok instance or the closure result if it is a Result')]
     public function andThen(callable $fn): Result
     {
         $result = $fn($this->value);
@@ -104,7 +102,7 @@ final readonly class Ok implements Result
      * @param  callable(E): Result<T, E>  $fn
      * @return Result<T, E>
      */
-    #[ResultReturn]
+    #[Pure('Returns self for Ok instances')]
     public function orElse(callable $fn): Result
     {
         return $this;
@@ -117,15 +115,13 @@ final readonly class Ok implements Result
      * @param  callable(E): U  $errFn
      * @return U
      */
-    #[SideEffect('Returns the result of the Ok function')]
+    #[Pure('Returns the result of the Ok closure')]
     public function match(callable $okFn, callable $errFn): mixed
     {
         return $okFn($this->value);
     }
 
     /**
-     * Returns the contained Ok value.
-     *
      * @return T
      */
     #[Pure('Returns the contained Ok value')]
@@ -135,21 +131,15 @@ final readonly class Ok implements Result
     }
 
     /**
-     * Returns the contained Err value, throwing since this is an Ok value.
-     *
-     * @return never
-     *
      * @throws UnwrapException
      */
     #[Pure('Throws since this is an Ok value')]
-    public function unwrapErr(): mixed
+    public function unwrapErr(): never
     {
         throw UnwrapException::fromUnwrapOkAsError($this->value);
     }
 
     /**
-     * Returns the contained Ok value without checking.
-     *
      * @return T
      */
     #[Pure('Returns the contained Ok value without checking')]
@@ -159,48 +149,39 @@ final readonly class Ok implements Result
     }
 
     /**
-     * Returns the contained Err value without checking.
-     * This will return undefined behavior since this is an Ok value.
-     *
-     * @return never
-     *
-     * @throws UnwrapException
+     * @return Result<T, E>
      */
-    #[Pure('Returns undefined behavior since this is an Ok value')]
-    public function unwrapErrUnchecked(): mixed
+    #[Pure('Returns self since this is an Ok value')]
+    public function unwrapErrUnchecked(): Result
     {
-        throw UnwrapException::fromUnwrapOkAsError($this->value);
+        return $this;
     }
 
     /**
-     * Returns the contained Ok value or computes it from a closure.
-     *
      * @param  callable(E): T  $op
      * @return T
      */
+    #[Pure('Returns the contained Ok value')]
     public function unwrapOrElse(callable $op): mixed
     {
         return $this->value;
     }
 
     /**
-     * Returns the contained Ok value or the default value for type T.
-     *
      * @param  DefaultValueProvider<T>  $provider  The provider for the default value
      * @return T
      */
+    #[Pure('Returns the contained Ok value')]
     public function unwrapOrDefault(DefaultValueProvider $provider): mixed
     {
         return $this->value;
     }
 
     /**
-     * Calls the provided closure with a reference to the contained value (if Ok).
-     *
      * @param  callable(T): void  $fn  The function to call with the contained value
      * @return Result<T, E> Returns self for chaining
      */
-    #[ResultReturn]
+    #[Pure('Executes provided closure with the contained value. Returns  self for chaining')]
     public function inspect(callable $fn): Result
     {
         try {
@@ -211,39 +192,31 @@ final readonly class Ok implements Result
     }
 
     /**
-     * Calls the provided closure with a reference to the contained error (if Err).
-     *
      * @param  callable(E): void  $fn  The function to call with the contained error
      * @return Result<T, E> Returns self for chaining
      */
-    #[ResultReturn]
+    #[Pure('Returns self since this is the Ok variant')]
     public function inspectErr(callable $fn): Result
     {
         return $this;
     }
 
     /**
-     * Checks if the result is Err and the error value matches a predicate.
-     *
-     * @param  callable(E): bool  $fn  The predicate to check against the error value
+     * @param  callable(E): bool  $fn  The closure to call with the contained error
      */
+    #[Pure('Returns false since this is the Ok variant. Never calls the closure')]
     public function isErrAnd(callable $fn): bool
     {
         return false;
     }
 
     /**
-     * Checks if the result is Ok and the contained value matches a predicate.
-     *
-     * @param  callable(T): bool  $fn  The predicate to check against the contained value
+     * @param  callable(T): bool  $fn  The closure to call with the contained value
      */
+    #[Pure('Executes the closure and returns its result as a boolean')]
     public function isOkAnd(callable $fn): bool
     {
-        try {
-            return $fn($this->value);
-        } catch (Throwable) {
-            return false;
-        }
+        return (bool)$fn($this->value);
     }
 
     /**
@@ -259,15 +232,12 @@ final readonly class Ok implements Result
     }
 
     /**
-     * Returns the contained Err value or throws with the provided message.
-     *
      * @param  string  $msg  The message to use if the value is an Ok
-     * @return never
      *
      * @throws UnwrapException
      */
     #[Pure('Throws with custom message since this is an Ok value')]
-    public function expectErr(string $msg): mixed
+    public function expectErr(string $msg): never
     {
         throw UnwrapException::fromExpectErr($msg, $this->value);
     }

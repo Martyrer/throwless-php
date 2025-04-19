@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Martyrer\Throwless;
 
 use Martyrer\Throwless\Attribute\Pure;
-use Martyrer\Throwless\Attribute\ResultReturn;
 use Martyrer\Throwless\Attribute\ResultType;
 use Martyrer\Throwless\Exception\UnwrapException;
-use Throwable;
 
 /**
  * Represents a failed result containing an error.
@@ -40,11 +38,7 @@ final readonly class Err implements Result
         return true;
     }
 
-    /**
-     * @param  T  $default
-     * @return T
-     */
-    #[Pure('Returns the default value for Err instances')]
+    #[Pure('For Err instances, always returns the default')]
     public function unwrapOr(mixed $default): mixed
     {
         return $default;
@@ -57,7 +51,6 @@ final readonly class Err implements Result
      * @return Result<U, E>
      */
     #[Pure('Returns self for Err instances')]
-    #[ResultReturn]
     public function map(callable $fn): Result
     {
         return $this;
@@ -69,8 +62,7 @@ final readonly class Err implements Result
      * @param  callable(E): F  $fn
      * @return Result<T, F>
      */
-    #[Pure('Applies the function to the contained error')]
-    #[ResultReturn]
+    #[Pure('Executes the closure with a contained error and returns a new Err instance or the closure result if it is a Result')]
     public function mapErr(callable $fn): Result
     {
         $result = $fn($this->error);
@@ -90,7 +82,6 @@ final readonly class Err implements Result
      * @return Result<U, E>
      */
     #[Pure('Returns self for Err instances')]
-    #[ResultReturn]
     public function andThen(callable $fn): Result
     {
         return $this;
@@ -102,8 +93,7 @@ final readonly class Err implements Result
      * @param  callable(E): F  $fn
      * @return Result<T, F>
      */
-    #[Pure('Chains the Result-returning function on error')]
-    #[ResultReturn]
+    #[Pure('Executes the closure with a contained error and returns a new Err instance or the closure result if it is a Result')]
     public function orElse(callable $fn): Result
     {
         $result = $fn($this->error);
@@ -122,15 +112,13 @@ final readonly class Err implements Result
      * @param  callable(E): U  $errFn
      * @return U
      */
-    #[Pure('Applies the error function to the contained error')]
+    #[Pure('Returns the result of the Err closure')]
     public function match(callable $okFn, callable $errFn): mixed
     {
         return $errFn($this->error);
     }
 
     /**
-     * Returns the contained Ok value, throwing since this is an Err value.
-     *
      * @return T
      *
      * @throws UnwrapException
@@ -153,20 +141,15 @@ final readonly class Err implements Result
     }
 
     /**
-     * Returns the contained Ok value without checking.
-     * This will return undefined behavior since this is an Err value.
-     *
      * @return E
      */
-    #[Pure('Returns undefined behavior since this is an Err value')]
+    #[Pure('Returns self since this is an Err value')]
     public function unwrapUnchecked(): mixed
     {
         return $this->error; // this is technically undefined behavior
     }
 
     /**
-     * Returns the contained Err value without checking.
-     *
      * @return E
      */
     #[Pure('Returns the contained Err value without checking')]
@@ -176,13 +159,10 @@ final readonly class Err implements Result
     }
 
     /**
-     * Returns the contained Ok value or computes it from a closure.
-     *
      * @param  callable(E): T  $op
      * @return Result<T, E>
      */
-    #[Pure('Computes the value from the error using the provided closure')]
-    #[ResultReturn]
+    #[Pure('Computes the value from the error using the provided closure. Returns a new Ok instance')]
     public function unwrapOrElse(callable $op): Result
     {
         /** @var Ok<T, E> */
@@ -190,8 +170,6 @@ final readonly class Err implements Result
     }
 
     /**
-     * Returns the contained Ok value or the default value for type T.
-     *
      * @param  DefaultValueProvider<T>  $provider  The provider for the default value
      * @return T
      */
@@ -202,60 +180,48 @@ final readonly class Err implements Result
     }
 
     /**
-     * Calls the provided closure with a reference to the contained value (if Ok).
-     *
      * @param  callable(T): void  $fn  The function to call with the contained value
      * @return Result<T, E> Returns self for chaining
      */
-    #[ResultReturn]
+    #[Pure('Returns self since this is an Err value')]
     public function inspect(callable $fn): Result
     {
         return $this;
     }
 
     /**
-     * Calls the provided closure with a reference to the contained error (if Err).
-     *
      * @param  callable(E): void  $fn  The function to call with the contained error
      * @return Result<T, E> Returns self for chaining
      */
-    #[ResultReturn]
+    #[Pure('Executes provided closure with the contained error. Returns self for chaining')]
     public function inspectErr(callable $fn): Result
     {
-        $fn($this->error);
-
-        return $this;
-    }
-
-    /**
-     * Checks if the result is Err and the error value matches a predicate.
-     *
-     * @param  callable(E): bool  $fn  The predicate to check against the error value
-     */
-    #[Pure('Checks if the error value matches the predicate')]
-    public function isErrAnd(callable $fn): bool
-    {
         try {
-            return $fn($this->error);
-        } catch (Throwable) {
-            return false;
+            $fn($this->error);
+        } finally {
+            return $this;
         }
     }
 
     /**
-     * Checks if the result is Ok and the contained value matches a predicate.
-     *
-     * @param  callable(T): bool  $fn  The predicate to check against the contained value
+     * @param  callable(E): bool  $fn  The closure to call with the contained error
      */
-    #[Pure('Always returns false for Err instances')]
+    #[Pure('Executes the closure and returns its result as a boolean')]
+    public function isErrAnd(callable $fn): bool
+    {
+        return (bool)$fn($this->error);
+    }
+
+    /**
+     * @param  callable(T): bool  $fn  The closure to call with the contained value
+     */
+    #[Pure('Returns false since this is the Err variant. Never calls the closure')]
     public function isOkAnd(callable $fn): bool
     {
         return false;
     }
 
     /**
-     * Returns the contained Ok value or throws with the provided message.
-     *
      * @param  string  $msg  The message to use if the value is an Err
      * @return T
      *
@@ -268,8 +234,6 @@ final readonly class Err implements Result
     }
 
     /**
-     * Returns the contained Err value or throws with the provided message.
-     *
      * @param  string  $msg  The message to use if the value is an Ok
      * @return E
      */

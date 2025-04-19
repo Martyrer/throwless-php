@@ -19,10 +19,10 @@ composer require martyrer/throwless-php
 ## Available Methods
 
 - [**Type Checking**](#type-checking)
-  - `isOk()` - Check if the Result contains a success value
-  - `isErr()` - Check if the Result contains an error value
-  - `isOkAnd(callable $fn)` - Check if Result is Ok and the value matches a predicate
-  - `isErrAnd(callable $fn)` - Check if Result is Err and the error matches a predicate
+  - [`isOk()`](#isok) - Check if the Result contains a success value
+  - [`isErr()`](#iserr) - Check if the Result contains an error value
+  - [`isOkAnd(callable $fn)`](#isokand) - Check if Result is Ok and the value matches a predicate
+  - [`isErrAnd(callable $fn)`](#iserrand) - Check if Result is Err and the error matches a predicate
 
 - [**Transformation**](#transformation-methods)
   - [`map(callable $fn)`](#map) - Transform the success value
@@ -33,19 +33,19 @@ composer require martyrer/throwless-php
   - [`match(callable $okFn, callable $errFn)`](#match) - Handle both success and error cases
 
 - [**Inspection**](#inspection-methods)
-  - [`inspect(callable $fn)`](#inspect-and-inspecterr) - Inspect the success value
-  - [`inspectErr(callable $fn)`](#inspect-and-inspecterr) - Inspect the error value
+  - [`inspect(callable $fn)`](#inspect) - Inspect the success value
+  - [`inspectErr(callable $fn)`](#inspecterr) - Inspect the error value
 
 - [**Unwrapping**](#unwrapping-methods)
-  - [`unwrap()`](#unwrapping-values) - Get the success value or throw
-  - [`unwrapErr()`](#unwrapping-values) - Get the error value or throw
+  - [`unwrap()`](#unwrap) - Get the success value or throw
+  - [`unwrapErr()`](#unwraperr) - Get the error value or throw
   - [`unwrapOr(mixed $default)`](#unwrapor) - Get the success value or a default
   - [`unwrapOrElse(callable $fn)`](#unwraporelse) - Get the success value or compute a default
-  - [`unwrapOrDefault(DefaultValueProvider $provider)`] - Get the success value or type's default
+  - [`unwrapOrDefault(DefaultValueProvider $provider)`](#unwrapordefault) - Get the success value or type's default
   - [`expect(string $msg)`](#expect) - Get the success value or throw with custom message
-  - [`expectErr(string $msg)`] - Get the error value or throw with custom message
-  - [`unwrapUnchecked()`] - Get the success value without checking (unsafe)
-  - [`unwrapErrUnchecked()`] - Get the error value without checking (unsafe)
+  - [`expectErr(string $msg)`](#expecterr) - Get the error value or throw with custom message
+  - [`unwrapUnchecked()`](#unwrapunchecked) - Get the success value without checking (unsafe)
+  - [`unwrapErrUnchecked()`](#unwraperrunchecked) - Get the error value without checking (unsafe)
 
 ## Basic Usage
 
@@ -77,28 +77,41 @@ $failure->unwrapOr(0); // 0
 
 ### Type Checking
 
-#### Basic Type Checks
-Check if a Result contains a success or error value:
+#### `isOk`
+Check if the Result contains a success value:
 
 ```php
 $result = new Ok(42);
-
 $result->isOk(); // true
-$result->isErr(); // false
 
 $error = new Err("failed");
 $error->isOk(); // false
+```
+
+#### `isErr`
+Check if the Result contains an error value:
+
+```php
+$result = new Ok(42);
+$result->isErr(); // false
+
+$error = new Err("failed");
 $error->isErr(); // true
 ```
 
-#### Predicate Checks
-Check if a Result matches a condition:
+#### `isOkAnd`
+Check if Result is Ok and the value matches a predicate:
 
 ```php
 $result = new Ok(42);
 $isEven = $result->isOkAnd(fn($x) => $x % 2 === 0); // true
 $isNegative = $result->isOkAnd(fn($x) => $x < 0); // false
+```
 
+#### `isErrAnd`
+Check if Result is Err and the error matches a predicate:
+
+```php
 $error = new Err("invalid input");
 $isInputError = $error->isErrAnd(fn($e) => str_contains($e, "input")); // true
 $isTimeout = $error->isErrAnd(fn($e) => str_contains($e, "timeout")); // false
@@ -156,8 +169,8 @@ $value = $result->match(
 
 ### Inspection Methods
 
-#### `inspect` and `inspectErr`
-Perform side effects without consuming the Result:
+#### `inspect`
+Perform side effects on success value without consuming the Result:
 
 ```php
 $result = new Ok(42);
@@ -165,7 +178,38 @@ $result->inspect(fn($value) => print("Got value: $value"))
        ->map(fn($x) => $x * 2);
 ```
 
+#### `inspectErr`
+Perform side effects on error value without consuming the Result:
+
+```php
+$error = new Err("error");
+$error->inspectErr(fn($err) => print("Error occurred: $err"))
+      ->mapErr(fn($err) => "Handled: $err");
+```
+
 ### Unwrapping Methods
+
+#### `unwrap`
+Get the success value or throw an exception:
+
+```php
+$result = new Ok(42);
+$value = $result->unwrap(); // 42
+
+$error = new Err("oops");
+$value = $error->unwrap(); // throws UnwrapException
+```
+
+#### `unwrapErr`
+Get the error value or throw an exception:
+
+```php
+$error = new Err("error message");
+$value = $error->unwrapErr(); // "error message"
+
+$success = new Ok(42);
+$value = $success->unwrapErr(); // throws UnwrapException
+```
 
 #### `unwrapOr`
 Get the value or a default:
@@ -183,6 +227,20 @@ $result = new Err("error");
 $value = $result->unwrapOrElse(fn($error) => strlen($error)); // 5
 ```
 
+#### `unwrapOrDefault`
+Get the success value or the type's default value:
+
+```php
+class DefaultProvider implements DefaultValueProvider {
+    public function getDefault(): int {
+        return 0;
+    }
+}
+
+$result = new Err("error");
+$value = $result->unwrapOrDefault(new DefaultProvider()); // 0
+```
+
 #### `expect`
 Unwrap with a custom error message:
 
@@ -192,6 +250,37 @@ $value = $result->expect("This should never fail"); // 42
 
 $error = new Err("oops");
 $value = $error->expect("Critical error"); // throws UnwrapException with message "Critical error"
+```
+
+#### `expectErr`
+Get the error value with a custom error message:
+
+```php
+$error = new Err("not found");
+$value = $error->expectErr("Expected error not found"); // "not found"
+
+$success = new Ok(42);
+$value = $success->expectErr("Expected an error"); // throws UnwrapException with message "Expected an error"
+```
+
+#### `unwrapUnchecked`
+Get the success value without safety checks (use with caution):
+
+```php
+// WARNING: Only use when you are absolutely certain the Result is Ok
+// Otherwise, it will cause undefined behavior
+$result = new Ok(42);
+$value = $result->unwrapUnchecked(); // 42
+```
+
+#### `unwrapErrUnchecked`
+Get the error value without safety checks (use with caution):
+
+```php
+// WARNING: Only use when you are absolutely certain the Result is Err
+// Otherwise, it will cause undefined behavior
+$error = new Err("error");
+$value = $error->unwrapErrUnchecked(); // "error"
 ```
 
 ## Real-world Examples

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Martyrer\Throwless;
 
-use stdClass;
+use ValueError;
 
 /**
  * Provides default values for basic PHP types.
@@ -21,15 +21,10 @@ final class BasicDefaultValueProvider implements DefaultValueProvider
      */
     public function getDefaultValue(string $type): mixed
     {
-        return match ($type) {
-            'string' => '',
-            'int' => 0,
-            'float' => 0.0,
-            'bool' => false,
-            'array' => [],
-            'iterable' => [],
-            'object' => new stdClass(),
-            default => null,
-        };
+        try {
+            return TypeDefaults::from($type)->getDefaultValue();
+        } catch (ValueError) {
+            return null;
+        }
     }
 }
